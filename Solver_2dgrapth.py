@@ -5,7 +5,8 @@ import numpy as np
 from scipy import signal
 import json
 import tqdm
-import math
+import argparse
+import parse_data
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -571,7 +572,11 @@ def get_real_phi(params, num_points=80):
 
 
 def main():
-    with open("test_params_jeka.json") as f:
+    parser = parse_data.conditions_parser()
+    args = parser.parse_args()
+    path = args.input
+
+    with open(path) as f:
         params = json.load(f)
     
     a, b = params["a"], params["b"]

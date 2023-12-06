@@ -8,6 +8,7 @@ from sympy.abc import x, y, t
 from sympy import *
 import sympy as sp
 import json
+import parse_data
 
 fps = 10 # frame per sec
 frn = 50
@@ -56,14 +57,17 @@ params["Yg"] = f(params["xg"], params["yg"], params["tg"]).reshape((1, 3))
 for key in ("x0", "y0", "xg", "yg", "tg", "Y0", "Yg"):
     params[key] = params[key].tolist()
 
-with open("test_params.json", "w") as ff:
+parser = parse_data.conditions_parser()
+args = parser.parse_args()
+path = args.output
+
+with open(path, "w") as ff:
     json.dump(params, ff, indent=2)
 
 num_points = 50
 X = np.linspace(a, b, num_points)
 Y = np.linspace(c, d, num_points)
 T_ = np.linspace(0, T, num_points)
-
 
 def update_plot(frame_number, zarray, plot):
     plot[0].remove()
