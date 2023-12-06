@@ -5,6 +5,7 @@ import numpy as np
 from scipy import signal
 import json
 import tqdm
+import math
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -68,6 +69,8 @@ class Solver:
         G_SS = self.G_np(self.XX, self.YY, self.TT)*self.hy
         G_SS[np.isnan(G_SS)] = 0
 
+        print(f'u_s{u_S}')
+
         phi = signal.convolve(G_SS, u_S, mode="valid")*self.ht
 
         return phi
@@ -92,7 +95,13 @@ class Solver:
         u_S0 = u0(self.X, self.Y, self.T_-self.T) * self.hx
         G_SS0 = self.G_np(self.XX, self.YY, self.TT+self.T) * self.hy
         G_SS0[np.isnan(G_SS0)] = 0
+        G_SS0[np.isinf(G_SS0)] = 10^7
+        u_S0[np.isnan(u_S0)] = 0
+        u_S0[np.isinf(u_S0)] = 10^7
 
+        print('G_SS0')
+        print(G_SS0)
+        print('u_S0')
         print(u_S0)
 
         phi = signal.convolve(G_SS0, u_S0, mode="valid") * self.ht
@@ -122,6 +131,8 @@ class Solver:
                 G_SSg[np.isnan(G_SSg)] = 0
 
                 phi += signal.convolve(G_SSg, u_Sg, mode="valid") * self.ht
+
+        phi[np.isnan(phi)] = 0
 
         return phi
 
@@ -285,6 +296,7 @@ class Solver:
         res = np.vstack([p1, p2])
         
         res[np.isnan(res)] = 0
+        res[np.isinf(res)] = 10^7
 
         return res
 
@@ -321,7 +333,11 @@ class Solver:
         Y0 = Y0.reshape((-1, 1))
         Yg = Yg.reshape((-1, 1))
 
-        return np.vstack([Y0, Yg])
+        res = np.vstack([Y0, Yg])
+
+        res[np.isnan(res)] = 0
+
+        return res
 
     def compute_As(self, params):
         """
@@ -420,14 +436,21 @@ class Solver:
         Av0 = np.array(self.nquad_matrix(A1*Matrix([v0])).tolist())
         Avg = np.array(self.nquad_matrix(A2*Matrix([vg])).tolist())
 
+
+
         Av = np.vstack([Av0, Avg])
+        Av[np.isnan(Av)] = 0
 
         print("Pinv:")
         print(P_inv)
 
+        print("Y - Av:")  
+        print(Y - Av)
+
         u0 = (A @ P_inv @ (Y - Av))[0, 0] + v0
         # u0 = lambdify((x, y, t), u0, [{'Heaviside': lambda x: np.heaviside(x, 1)}, 'numpy'])
         u0 = lambdify((x, y, t), u0, 'numpy')
+        print(u0(1, 1, 1))
         
 
         ug = (A @ P_inv @ (Y-Av))[0, 0] + vg
@@ -435,9 +458,14 @@ class Solver:
         ug = lambdify((x, y, t), ug, 'numpy')
 
         phi_0 = self.convolve_green_0(u0)
-        phi_g = self.convolve_green_g(ug)   
+        phi_g = self.convolve_green_g(ug)
+        print('phi_0.max')
+        print(phi_0.max())
+        print('phi_g.max')
+        print(phi_g.max())
 
         phi = phi_inf + phi_0 + phi_g
+        print(phi.max())
         self.update_pbar("End")
         self.pbar.close()
         eps = abs(Y.T@Y - Y.T@P@P_inv@Y)
@@ -500,8 +528,8 @@ def animate_3d(phi, phi_real, X, Y, figsize=(15, 5), repeat=False, interval=40):
     plot = [ax1.plot_surface(X_, Y_, phi[:, :, 0], rstride=1, cstride=1)]
     plot_real = [ax1.plot_surface(X_, Y_, phi_real[:, :, 0], rstride=1, cstride=1)]
 
-    ax1.set_zlim(-1.1, 1.1)
-    ax2.set_zlim(-1.1, 1.1)
+    #ax1.set_zlim(-1.1, 1.1)
+    #ax2.set_zlim(-1.1, 1.1)
 
     ax1.set_title("Phi")
     ax2.set_title("Phi real")
